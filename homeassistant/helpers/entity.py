@@ -10,13 +10,13 @@ from homeassistant.const import (
     ATTR_ASSUMED_STATE, ATTR_FRIENDLY_NAME, ATTR_HIDDEN, ATTR_ICON,
     ATTR_UNIT_OF_MEASUREMENT, DEVICE_DEFAULT_NAME, STATE_OFF, STATE_ON,
     STATE_UNAVAILABLE, STATE_UNKNOWN, TEMP_CELSIUS, TEMP_FAHRENHEIT,
-    ATTR_ENTITY_PICTURE)
+    ATTR_ENTITY_PICTURE, ATTR_SUPPORTED_FEATURES, ATTR_DEVICE_CLASS)
 from homeassistant.core import HomeAssistant
+from homeassistant.config import DATA_CUSTOMIZE
 from homeassistant.exceptions import NoEntitySpecifiedError
 from homeassistant.util import ensure_unique_string, slugify
 from homeassistant.util.async import (
     run_coroutine_threadsafe, run_callback_threadsafe)
-from homeassistant.helpers.customize import get_overrides
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -110,6 +110,11 @@ class Entity(object):
         return None
 
     @property
+    def device_class(self) -> str:
+        """Return the class of this device, from component DEVICE_CLASSES."""
+        return None
+
+    @property
     def unit_of_measurement(self):
         """Return the unit of measurement of this entity, if any."""
         return None
@@ -148,6 +153,11 @@ class Entity(object):
         """
         return False
 
+    @property
+    def supported_features(self) -> int:
+        """Flag supported features."""
+        return None
+
     def update(self):
         """Retrieve latest state.
 
@@ -170,14 +180,9 @@ class Entity(object):
 
         If force_refresh == True will update entity before setting state.
         """
-        # We're already in a thread, do the force refresh here.
-        if force_refresh and not hasattr(self, 'async_update'):
-            self.update()
-            force_refresh = False
-
-        run_coroutine_threadsafe(
-            self.async_update_ha_state(force_refresh), self.hass.loop
-        ).result()
+        _LOGGER.warning("'update_ha_state' is deprecated. "
+                        "Use 'schedule_update_ha_state' instead.")
+        self.schedule_update_ha_state(force_refresh)
 
     @asyncio.coroutine
     def async_update_ha_state(self, force_refresh=False):
@@ -199,38 +204,37 @@ class Entity(object):
                 # pylint: disable=no-member
                 yield from self.async_update()
             else:
-                # PS: Run this in our own thread pool once we have
-                #     future support?
                 yield from self.hass.loop.run_in_executor(None, self.update)
 
         start = timer()
 
-        state = self.state
-
-        if state is None:
-            state = STATE_UNKNOWN
-        else:
-            state = str(state)
-
-        attr = self.state_attributes or {}
-
-        device_attr = self.device_state_attributes
-
-        if device_attr is not None:
-            attr.update(device_attr)
-
-        self._attr_setter('unit_of_measurement', str, ATTR_UNIT_OF_MEASUREMENT,
-                          attr)
-
         if not self.available:
             state = STATE_UNAVAILABLE
             attr = {}
+        else:
+            state = self.state
+
+            if state is None:
+                state = STATE_UNKNOWN
+            else:
+                state = str(state)
+
+            attr = self.state_attributes or {}
+            device_attr = self.device_state_attributes
+            if device_attr is not None:
+                attr.update(device_attr)
+
+        self._attr_setter('unit_of_measurement', str, ATTR_UNIT_OF_MEASUREMENT,
+                          attr)
 
         self._attr_setter('name', str, ATTR_FRIENDLY_NAME, attr)
         self._attr_setter('icon', str, ATTR_ICON, attr)
         self._attr_setter('entity_picture', str, ATTR_ENTITY_PICTURE, attr)
         self._attr_setter('hidden', bool, ATTR_HIDDEN, attr)
         self._attr_setter('assumed_state', bool, ATTR_ASSUMED_STATE, attr)
+        self._attr_setter('supported_features', int, ATTR_SUPPORTED_FEATURES,
+                          attr)
+        self._attr_setter('device_class', str, ATTR_DEVICE_CLASS, attr)
 
         end = timer()
 
@@ -242,7 +246,8 @@ class Entity(object):
                             end - start)
 
         # Overwrite properties that have been set in the config file.
-        attr.update(get_overrides(self.hass, self.entity_id))
+        if DATA_CUSTOMIZE in self.hass.data:
+            attr.update(self.hass.data[DATA_CUSTOMIZE].get(self.entity_id))
 
         # Remove hidden property if false so it won't show up.
         if not attr.get(ATTR_HIDDEN, True):
@@ -270,15 +275,10 @@ class Entity(object):
 
         That is only needed on executor to not block.
         """
-        # We're already in a thread, do the force refresh here.
-        if force_refresh and not hasattr(self, 'async_update'):
-            self.update()
-            force_refresh = False
-
         self.hass.add_job(self.async_update_ha_state(force_refresh))
 
     def remove(self) -> None:
-        """Remove entitiy from HASS."""
+        """Remove entity from HASS."""
         run_coroutine_threadsafe(
             self.async_remove(), self.hass.loop
         ).result()

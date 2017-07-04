@@ -9,7 +9,7 @@ import requests_mock
 from datetime import timedelta
 
 from homeassistant.components.sensor import darksky
-from homeassistant.bootstrap import setup_component
+from homeassistant.setup import setup_component
 
 from tests.common import load_fixture, get_test_home_assistant
 
@@ -32,7 +32,8 @@ class TestDarkSkySetup(unittest.TestCase):
         self.key = 'foo'
         self.config = {
             'api_key': 'foo',
-            'monitored_conditions': ['summary', 'icon'],
+            'forecast': [1, 2],
+            'monitored_conditions': ['summary', 'icon', 'temperature_max'],
             'update_interval': timedelta(seconds=120),
         }
         self.lat = 37.8267
@@ -80,4 +81,4 @@ class TestDarkSkySetup(unittest.TestCase):
         darksky.setup_platform(self.hass, self.config, self.add_entities)
         self.assertTrue(mock_get_forecast.called)
         self.assertEqual(mock_get_forecast.call_count, 1)
-        self.assertEqual(len(self.entities), 2)
+        self.assertEqual(len(self.entities), 7)

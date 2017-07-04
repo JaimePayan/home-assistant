@@ -5,31 +5,19 @@ For more details about this platform, please refer to the documentation at
 https://home-assistant.io/components/switch.zwave/
 """
 import logging
+import time
 # Because we do not compile openzwave on CI
 # pylint: disable=import-error
 from homeassistant.components.switch import DOMAIN, SwitchDevice
 from homeassistant.components import zwave
+from homeassistant.components.zwave import workaround, async_setup_platform  # noqa # pylint: disable=unused-import
 
 _LOGGER = logging.getLogger(__name__)
 
 
-# pylint: disable=unused-argument
-def setup_platform(hass, config, add_devices, discovery_info=None):
-    """Setup the Z-Wave platform."""
-    if discovery_info is None or zwave.NETWORK is None:
-        return
-
-    node = zwave.NETWORK.nodes[discovery_info[zwave.const.ATTR_NODE_ID]]
-    value = node.values[discovery_info[zwave.const.ATTR_VALUE_ID]]
-
-    if not node.has_command_class(zwave.const.COMMAND_CLASS_SWITCH_BINARY):
-        return
-    if value.type != zwave.const.TYPE_BOOL or value.genre != \
-       zwave.const.GENRE_USER:
-        return
-
-    value.set_change_verified(False)
-    add_devices([ZwaveSwitch(value)])
+def get_device(value, **kwargs):
+    """Create zwave entity device."""
+    return ZwaveSwitch(value)
 
 
 class ZwaveSwitch(zwave.ZWaveDeviceEntity, SwitchDevice):
@@ -37,21 +25,19 @@ class ZwaveSwitch(zwave.ZWaveDeviceEntity, SwitchDevice):
 
     def __init__(self, value):
         """Initialize the Z-Wave switch device."""
-        from openzwave.network import ZWaveNetwork
-        from pydispatch import dispatcher
-
         zwave.ZWaveDeviceEntity.__init__(self, value, DOMAIN)
+        self.refresh_on_update = (workaround.get_device_mapping(value) ==
+                                  workaround.WORKAROUND_REFRESH_NODE_ON_UPDATE)
+        self.last_update = time.perf_counter()
+        self._state = self._value.data
 
-        self._state = value.data
-        dispatcher.connect(
-            self._value_changed, ZWaveNetwork.SIGNAL_VALUE_CHANGED)
-
-    def _value_changed(self, value):
-        """Called when a value has changed on the network."""
-        if self._value.value_id == value.value_id:
-            _LOGGER.debug('Value changed for label %s', self._value.label)
-            self._state = value.data
-            self.schedule_update_ha_state()
+    def update_properties(self):
+        """Callback on data changes for node values."""
+        self._state = self._value.data
+        if self.refresh_on_update and \
+                time.perf_counter() - self.last_update > 30:
+            self.last_update = time.perf_counter()
+            self._value.node.request_state()
 
     @property
     def is_on(self):

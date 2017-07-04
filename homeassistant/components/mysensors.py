@@ -7,11 +7,12 @@ https://home-assistant.io/components/sensor.mysensors/
 import logging
 import os
 import socket
+import sys
 
 import voluptuous as vol
 
 import homeassistant.helpers.config_validation as cv
-from homeassistant.bootstrap import setup_component
+from homeassistant.setup import setup_component
 from homeassistant.components.mqtt import (valid_publish_topic,
                                            valid_subscribe_topic)
 from homeassistant.const import (ATTR_BATTERY_LEVEL, CONF_NAME,
@@ -81,15 +82,37 @@ def has_all_unique_files(value):
     return value
 
 
+def is_persistence_file(value):
+    """Validate that persistence file path ends in either .pickle or .json."""
+    if value.endswith(('.json', '.pickle')):
+        return value
+    else:
+        raise vol.Invalid(
+            '{} does not end in either `.json` or `.pickle`'.format(value))
+
+
+def is_serial_port(value):
+    """Validate that value is a windows serial port or a unix device."""
+    if sys.platform.startswith('win'):
+        ports = ('COM{}'.format(idx + 1) for idx in range(256))
+        if value in ports:
+            return value
+        else:
+            raise vol.Invalid(
+                '{} is not a serial port'.format(value))
+    else:
+        return cv.isdevice(value)
+
+
 CONFIG_SCHEMA = vol.Schema({
     DOMAIN: vol.Schema({
         vol.Required(CONF_GATEWAYS): vol.All(
             cv.ensure_list, has_all_unique_files,
             [{
                 vol.Required(CONF_DEVICE):
-                    vol.Any(cv.isdevice, MQTT_COMPONENT, is_socket_address),
+                    vol.Any(MQTT_COMPONENT, is_socket_address, is_serial_port),
                 vol.Optional(CONF_PERSISTENCE_FILE):
-                    vol.All(cv.string, has_parent_dir),
+                    vol.All(cv.string, is_persistence_file, has_parent_dir),
                 vol.Optional(
                     CONF_BAUD_RATE,
                     default=DEFAULT_BAUD_RATE): cv.positive_int,
@@ -163,12 +186,12 @@ def setup(hass, config):
 
         def gw_start(event):
             """Callback to trigger start of gateway and any persistence."""
-            gateway.start()
-            hass.bus.listen_once(EVENT_HOMEASSISTANT_STOP,
-                                 lambda event: gateway.stop())
             if persistence:
                 for node_id in gateway.sensors:
                     gateway.event_callback('persistence', node_id)
+            gateway.start()
+            hass.bus.listen_once(EVENT_HOMEASSISTANT_STOP,
+                                 lambda event: gateway.stop())
 
         hass.bus.listen_once(EVENT_HOMEASSISTANT_START, gw_start)
 
@@ -212,6 +235,9 @@ def setup(hass, config):
         discovery.load_platform(hass, component, DOMAIN, {}, config)
 
     discovery.load_platform(
+        hass, 'device_tracker', DOMAIN, {}, config)
+
+    discovery.load_platform(
         hass, 'notify', DOMAIN, {CONF_NAME: DOMAIN}, config)
 
     return True
@@ -225,6 +251,7 @@ def pf_callback_factory(map_sv_types, devices, entity_class, add_devices=None):
             _LOGGER.info('No sketch_name: node %s', node_id)
             return
 
+        new_devices = []
         for child in gateway.sensors[node_id].children.values():
             for value_type in child.values.keys():
                 key = node_id, child.id, value_type
@@ -246,11 +273,12 @@ def pf_callback_factory(map_sv_types, devices, entity_class, add_devices=None):
                 devices[key] = device_class(
                     gateway, node_id, child.id, name, value_type, child.type)
                 if add_devices:
-                    _LOGGER.info('Adding new devices: %s', devices[key])
-                    add_devices([devices[key]])
-                    devices[key].schedule_update_ha_state(True)
+                    new_devices.append(devices[key])
                 else:
                     devices[key].update()
+        if add_devices and new_devices:
+            _LOGGER.info('Adding new devices: %s', new_devices)
+            add_devices(new_devices, True)
     return mysensors_callback
 
 
