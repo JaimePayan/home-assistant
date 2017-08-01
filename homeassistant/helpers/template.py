@@ -8,6 +8,7 @@ import re
 import jinja2
 from jinja2 import contextfilter
 from jinja2.sandbox import ImmutableSandboxedEnvironment
+from jinja2.ext import loopcontrols
 
 from homeassistant.const import (
     STATE_UNKNOWN, ATTR_LATITUDE, ATTR_LONGITUDE, MATCH_ALL)
