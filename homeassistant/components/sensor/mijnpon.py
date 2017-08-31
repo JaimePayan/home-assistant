@@ -13,9 +13,9 @@ _LOGGER = logging.getLogger(__name__)
 DEPENDENCIES = ['mijnpon']
 
 SENSOR_TYPES = {
-    'mileage': ['Mileage', LENGTH_KILOMETERS],
-    'mileage_left': ['Mileage Left', LENGTH_KILOMETERS],
-    'fuel_left': ['Fuel Left', VOLUME_LITERS]
+    'mileage': ['Mileage', LENGTH_KILOMETERS, 'mdi:counter'],
+    'mileage_left': ['Mileage Left', LENGTH_KILOMETERS, 'mdi:fuel'],
+    'fuel_left': ['Fuel Left', VOLUME_LITERS, 'mdi:fuel']
 }
 
 
@@ -43,6 +43,7 @@ class MijnPonSensor(Entity):
         self._vehicle = vehicle
         self._state = None
         self._unit_of_measurement = SENSOR_TYPES[sensor_type][1]
+        self._icon = SENSOR_TYPES[sensor_type][2]
 
     @property
     def name(self):
@@ -53,6 +54,10 @@ class MijnPonSensor(Entity):
     def state(self):
         """Return the current state."""
         return self._state
+
+    @property
+    def icon(self):
+        return self._icon
 
     @property
     def unit_of_measurement(self):
