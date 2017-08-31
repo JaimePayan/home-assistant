@@ -12,6 +12,11 @@ _LOGGER = logging.getLogger(__name__)
 
 DEPENDENCIES = ['mijnpon']
 
+SENSOR_TYPES = {
+    'ignition': ['Ignition', 1, 'power', 'mdi:power', 'mdi:power'],
+    'locked': ['Locked', 0, 'opening', 'mdi:lock', 'mdi:lock-open'],
+    'parking_brake': ['Parking brake', 0, 'safety', 'mdi:parking', 'mdi:parking']
+}
 
 def setup_platform(hass, config, add_devices, discovery_info=None):
     """Set up a Mijnpon binary sensor."""
@@ -22,7 +27,7 @@ def setup_platform(hass, config, add_devices, discovery_info=None):
     for vehicle in hass.data[DATA_MIJNPON].vehicles():
         devs.append(MijnPonBinarySensor(vehicle.license_plate, 'ignition', vehicle))
         devs.append(MijnPonBinarySensor(vehicle.license_plate, 'locked', vehicle))
-        devs.append(MijnPonBinarySensor(vehicle.license_plate, 'parking brake', vehicle))
+        devs.append(MijnPonBinarySensor(vehicle.license_plate, 'parking_brake', vehicle))
 
     add_devices(devs, True)
 
@@ -32,10 +37,14 @@ class MijnPonBinarySensor(BinarySensorDevice):
 
     def __init__(self, name, sensor_type, vehicle):
         """Initialize sensors from the car."""
-        self._name = name + ' ' + sensor_type
+        self._name = name + ' ' + SENSOR_TYPES[sensor_type][0]
         self._type = sensor_type
         self._vehicle = vehicle
-        self._state = False
+        self._state = None
+        self._on_state = SENSOR_TYPES[sensor_type][1]
+        self._icon_off = SENSOR_TYPES[sensor_type][3]
+        self._icon_on = SENSOR_TYPES[sensor_type][4]
+        self._device_class = SENSOR_TYPES[sensor_type][2]
 
     @property
     def name(self):
@@ -43,9 +52,22 @@ class MijnPonBinarySensor(BinarySensorDevice):
         return self._name
 
     @property
+    def device_class(self):
+        """Return the class of this sensor."""
+        return self._device_class
+
+    @property
+    def icon(self):
+        """Return the icon of this sensor."""
+        if self.is_on:
+            return self._icon_on
+        else:
+            return self._icon_off
+
+    @property
     def is_on(self):
         """Return the state of the entity."""
-        return self._state == 1
+        return self._state == self._on_state
 
     def update(self):
         """Retrieve sensor data from the car."""
@@ -53,7 +75,7 @@ class MijnPonBinarySensor(BinarySensorDevice):
             self._state = self._vehicle.measureddata.get('Power').get('ValueDecimal')
         elif self._type == 'locked':
             self._state = self._vehicle.measureddata.get('VehicleLocked').get('ValueDecimal')
-        elif self._type == 'parking brake':
+        elif self._type == 'parking_brake':
             self._state = self._vehicle.measureddata.get('ElectronicParkingBrake').get('ValueDecimal')
         else:
             self._state = None
