@@ -21,22 +21,16 @@ def setup_scanner(hass, config, see, discovery_info=None):
     
     _LOGGER.debug("setup mijnpon device tracker: %s" % discovery_info)
 
-    # name = position.street + ' ' + position.city
-    # self.dev_id = self.position.coordinate.get('Id')
     _LOGGER.debug("mijnpon coordinate: %s" % hass.data[DATA_MIJNPON].position.coordinate)
     interval = DEFAULT_SCAN_INTERVAL
-    # see(dev_id='car', host_name='Car', gps=(hass.data[DATA_MIJNPON].position.latitude, hass.data[DATA_MIJNPON].position.longitude), icon='mdi:car')
-
-#, location_name: name, 
 
     def update(now):
         """Update the car on every interval time."""
-        # _LOGGER.debug("mijnpon coordinate: %s" % hass.data[DATA_MIJNPON].position.coordinate)
         position = hass.data[DATA_MIJNPON].position
         attrs = {
-            #'speed': position.speed,
             'street': position.street,
-            'city': position.city
+            'city': position.city,
+            'speed': position.speed
         }
         see(dev_id='car', host_name='Car', gps=(position.latitude, position.longitude), attributes=attrs, icon='mdi:car')
         track_point_in_utc_time(hass, update, util.dt.utcnow() + interval)
