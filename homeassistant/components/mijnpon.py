@@ -76,3 +76,4 @@ class MijnPon(object):
         """Generate a list of vehicles and their location."""
         for vehicle in self.mijnPon.vehicles:
             yield vehicle
+            
