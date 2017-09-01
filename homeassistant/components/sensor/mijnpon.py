@@ -15,7 +15,8 @@ DEPENDENCIES = ['mijnpon']
 SENSOR_TYPES = {
     'mileage': ['Mileage', LENGTH_KILOMETERS, 'mdi:counter'],
     'mileage_left': ['Mileage Left', LENGTH_KILOMETERS, 'mdi:fuel'],
-    'fuel_left': ['Fuel Left', VOLUME_LITERS, 'mdi:fuel']
+    'fuel_left': ['Fuel Left', VOLUME_LITERS, 'mdi:fuel'],
+    'battery': ['Battery', 'V', 'mdi:car-battery']
 }
 
 
@@ -29,6 +30,7 @@ def setup_platform(hass, config, add_devices, discovery_info=None):
         devs.append(MijnPonSensor(vehicle.license_plate, 'mileage', vehicle))
         devs.append(MijnPonSensor(vehicle.license_plate, 'mileage_left', vehicle))
         devs.append(MijnPonSensor(vehicle.license_plate, 'fuel_left', vehicle))
+#        devs.append(MijnPonSensor(vehicle.license_plate, 'battery', vehicle))
 
     add_devices(devs, True)
 
@@ -73,6 +75,8 @@ class MijnPonSensor(Entity):
             self._state = self._vehicle.mileage_left
         elif self._type == 'fuel_left':
             self._state = self._vehicle.fuel_left
+        elif self._type == 'battery':
+            self._state = self._vehicle.measureddata('Battery Voltage')
         else:
             self._state = None
             _LOGGER.warning("Could not retrieve state from %s", self.name)
