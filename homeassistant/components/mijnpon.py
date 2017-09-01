@@ -41,6 +41,8 @@ def setup(hass, config):
     conf = config.get(DOMAIN);
     hass.data[DATA_MIJNPON] = MijnPon(hass, conf)
 
+    _LOGGER.debug("Setup MijnPon")
+
     discovery.load_platform(hass, 'device_tracker', DOMAIN, {}, config)
     discovery.load_platform(hass, 'sensor', DOMAIN, {}, config)
     discovery.load_platform(hass, 'binary_sensor', DOMAIN, {}, config)
@@ -55,15 +57,12 @@ class MijnPon(object):
         """Init Lyric devices."""
         import mijnpon
         access_token_cache_file = hass.config.path(TOKEN_FILE)
-        _LOGGER.debug("setup")
-        _LOGGER.debug("token file: %s" % access_token_cache_file)
         #_LOGGER.debug("conf: %s" % conf)
         self.mijnPon = mijnpon.MijnPon(
                                   token_cache_file=access_token_cache_file,
                                   username=conf.get(CONF_USERNAME),
                                   password=conf.get(CONF_PASSWORD), cache_ttl=conf.get(CONF_SCAN_INTERVAL))
-        _LOGGER.debug(self.mijnPon.lastknownposition)
-    
+
     @property
     def data(self):
       return self.mijnPon
@@ -76,4 +75,3 @@ class MijnPon(object):
         """Generate a list of vehicles and their location."""
         for vehicle in self.mijnPon.vehicles:
             yield vehicle
-            
