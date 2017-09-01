@@ -19,9 +19,6 @@ def setup_scanner(hass, config, see, discovery_info=None):
     if discovery_info is None:
         return
     
-    _LOGGER.debug("setup mijnpon device tracker: %s" % discovery_info)
-
-    _LOGGER.debug("mijnpon coordinate: %s" % hass.data[DATA_MIJNPON].position.coordinate)
     interval = DEFAULT_SCAN_INTERVAL
 
     def update(now):
