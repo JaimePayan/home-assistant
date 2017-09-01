@@ -19,7 +19,7 @@ _LOGGER = logging.getLogger(__name__)
 REQUIREMENTS = [
     'https://github.com/bramkragten/python-mijnpon'
     '/archive/master.zip'
-    '#python-mijnpon==0.0.1']
+    '#python-mijnpon==0.0.2']
 
 DOMAIN = 'mijnpon'
 
