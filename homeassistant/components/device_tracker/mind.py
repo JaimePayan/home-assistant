@@ -31,8 +31,8 @@ def setup_scanner(hass, config, see, discovery_info=None):
                 'country': vehicle.country,
             }
             see(dev_id=vehicle.license_plate, host_name=vehicle.brand, gps=(vehicle.lat, vehicle.lon), attributes=attrs, icon='mdi:car')
-            track_point_in_utc_time(hass, update, util.dt.utcnow() + interval)
             
+        track_point_in_utc_time(hass, update, util.dt.utcnow() + interval)
         return True
 
     return update(util.dt.utcnow())

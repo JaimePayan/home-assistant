@@ -14,7 +14,7 @@ DEPENDENCIES = ['mind']
 
 SENSOR_TYPES = {
     'ignition': ['Ignition', True, 'power', 'mdi:power', 'mdi:power'],
-    'locked': ['Locked', False, 'opening', 'mdi:lock', 'mdi:lock-open'],
+    'doors_locked': ['Locked', False, 'opening', 'mdi:lock', 'mdi:lock-open'],
     'parking_brake': ['Parking brake', False, 'safety', 'mdi:parking', 'mdi:parking']
 }
 
@@ -27,7 +27,7 @@ def setup_platform(hass, config, add_devices, discovery_info=None):
     mind = hass.data[DATA_MIND]
     for vehicle in mind.vehicles():
         devs.append(MindBinarySensor(vehicle.license_plate, 'ignition', mind, vehicle))
-        #  devs.append(MindBinarySensor(vehicle.license_plate, 'locked', mind, vehicle))
+        devs.append(MindBinarySensor(vehicle.license_plate, 'doors_locked', mind, vehicle))
         devs.append(MindBinarySensor(vehicle.license_plate, 'parking_brake', mind, vehicle))
 
     add_devices(devs, True)
@@ -44,9 +44,9 @@ class MindBinarySensor(BinarySensorDevice):
         self._mind = mind
         self._state = None
         self._on_state = SENSOR_TYPES[sensor_type][1]
+        self._device_class = SENSOR_TYPES[sensor_type][2]
         self._icon_off = SENSOR_TYPES[sensor_type][3]
         self._icon_on = SENSOR_TYPES[sensor_type][4]
-        self._device_class = SENSOR_TYPES[sensor_type][2]
 
     @property
     def name(self):
@@ -79,10 +79,10 @@ class MindBinarySensor(BinarySensorDevice):
                 self._mind.cache_ttl = 30
             else:
                 self._mind.cache_ttl = 60
-        elif self._type == 'locked':
-            self._state = self._vehicle.locked
+        elif self._type == 'doors_locked':
+            self._state = self._vehicle.doors_locked
         elif self._type == 'parking_brake':
-            self._state = self._vehicle.parkingBrakeElectric
+            self._state = self._vehicle.parking_brake
         else:
             self._state = None
             _LOGGER.warning("Could not retrieve state from %s", self.name)
