@@ -61,7 +61,8 @@ class Mind(object):
         #_LOGGER.debug("conf: %s" % conf)
         self.mind = mind.Mind(
                                   token_cache_file=access_token_cache_file,
-                                  client_id=conf.get(CONF_CLIENT_ID), client_secret=conf.get(CONF_CLIENT_SECRET)
+                                  client_id=conf.get(CONF_CLIENT_ID), 
+                                  client_secret=conf.get(CONF_CLIENT_SECRET),
                                   username=conf.get(CONF_USERNAME),
                                   password=conf.get(CONF_PASSWORD), cache_ttl=conf.get(CONF_SCAN_INTERVAL))
 
