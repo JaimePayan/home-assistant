@@ -10,7 +10,7 @@ import asyncio
 import voluptuous as vol
 import homeassistant.helpers.config_validation as cv
 from homeassistant.const import (
-    CONF_USERNAME, CONF_PASSWORD, CONF_SCAN_INTERVAL, CONF_CLIENT_ID, CONF_CLIENT_SECRET)
+    CONF_USERNAME, CONF_PASSWORD, CONF_SCAN_INTERVAL)
 from homeassistant.helpers import discovery
 from homeassistant.loader import get_component
 
@@ -20,6 +20,9 @@ REQUIREMENTS = [
     'https://github.com/bramkragten/python-mind'
     '/archive/master.zip'
     '#python-mind==0.0.5']
+
+CONF_CLIENT_ID = 'client_id'
+CONF_CLIENT_SECRET = 'client_secret'
 
 DOMAIN = 'mind'
 
